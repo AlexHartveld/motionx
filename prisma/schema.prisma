@@ -1,0 +1,37 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Habit {
+  id            String     @id @default(cuid())
+  userId        String
+  name          String
+  description   String?
+  frequency     String     // 'daily' | 'weekly' | 'monthly'
+  targetCount   Int
+  currentStreak Int        @default(0)
+  longestStreak Int        @default(0)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  archivedAt    DateTime?  // New field for soft delete
+  logs          HabitLog[]
+
+  @@index([userId])
+}
+
+model HabitLog {
+  id          String   @id @default(cuid())
+  habitId     String
+  userId      String
+  completedAt DateTime @default(now())
+  note        String?
+  habit       Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([habitId])
+} 
