@@ -15,7 +15,7 @@ export default function LoadingSpinner() {
       </div>
       
       <div className="mt-4 text-lg font-medium text-gray-600 animate-bounce">
-        Loading awesome habits...
+        Loading your routine tracker...
       </div>
       
       {/* Fun emoji */}

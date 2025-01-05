@@ -2,28 +2,31 @@
 
 import { useState } from 'react'
 
-type AddHabitFormProps = {
+type AddRoutineFormProps = {
   onAdd: () => void
 }
 
-export default function AddHabitForm({ onAdd }: AddHabitFormProps) {
+export default function AddRoutineForm({ onAdd }: AddRoutineFormProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'monthly'>('daily')
   const [targetCount, setTargetCount] = useState(1)
+  const [targetDuration, setTargetDuration] = useState(30)
+  const [durationType, setDurationType] = useState<'minutes' | 'hours'>('minutes')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     try {
-      await fetch('/api/habits', {
+      await fetch('/api/routines', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name,
           description,
           frequency,
-          targetCount
+          targetCount,
+          targetTime: durationType === 'hours' ? targetDuration * 60 : targetDuration // Store in minutes
         })
       })
       setIsOpen(false)
@@ -31,9 +34,11 @@ export default function AddHabitForm({ onAdd }: AddHabitFormProps) {
       setDescription('')
       setFrequency('daily')
       setTargetCount(1)
+      setTargetDuration(30)
+      setDurationType('minutes')
       onAdd()
     } catch (error) {
-      console.error('Error adding habit:', error)
+      console.error('Error adding routine:', error)
     }
   }
 
@@ -44,7 +49,7 @@ export default function AddHabitForm({ onAdd }: AddHabitFormProps) {
           onClick={() => setIsOpen(true)}
           className="w-full p-4 border-4 border-black dark:border-white border-dashed rounded-lg text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors brutalist-hover"
         >
-          + Add New Habit
+          + Add New Routine
         </button>
       ) : (
         <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 p-4 rounded-lg brutalist-border">
@@ -92,6 +97,29 @@ export default function AddHabitForm({ onAdd }: AddHabitFormProps) {
                 />
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold mb-1 text-black dark:text-white">Target Duration</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={targetDuration}
+                  onChange={(e) => setTargetDuration(Number(e.target.value))}
+                  className="w-full p-2 rounded border-2 border-black dark:border-white bg-white dark:bg-gray-800 text-black dark:text-white focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-1 text-black dark:text-white">Duration Type</label>
+                <select
+                  value={durationType}
+                  onChange={(e) => setDurationType(e.target.value as 'minutes' | 'hours')}
+                  className="w-full p-2 rounded border-2 border-black dark:border-white bg-white dark:bg-gray-800 text-black dark:text-white focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="minutes">Minutes</option>
+                  <option value="hours">Hours</option>
+                </select>
+              </div>
+            </div>
             <div className="flex justify-end space-x-2">
               <button
                 type="button"
@@ -104,7 +132,7 @@ export default function AddHabitForm({ onAdd }: AddHabitFormProps) {
                 type="submit"
                 className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded brutalist-hover"
               >
-                Add Habit
+                Add New Routine
               </button>
             </div>
           </div>

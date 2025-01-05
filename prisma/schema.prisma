@@ -7,31 +7,74 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Habit {
-  id            String     @id @default(cuid())
+model Routine {
+  id            String         @id @default(cuid())
   userId        String
   name          String
   description   String?
   frequency     String     // 'daily' | 'weekly' | 'monthly'
   targetCount   Int
+  targetTime    Int       @default(30)  // Duration in minutes
   currentStreak Int        @default(0)
   longestStreak Int        @default(0)
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
   archivedAt    DateTime?  // New field for soft delete
-  logs          HabitLog[]
+  logs          RoutineLog[]
+  focusSessions FocusSession[]
 
   @@index([userId])
 }
 
-model HabitLog {
+model RoutineLog {
   id          String   @id @default(cuid())
-  habitId     String
+  routineId   String
   userId      String
   completedAt DateTime @default(now())
   note        String?
-  habit       Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  routine     Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([habitId])
+  @@index([routineId])
+}
+
+model FocusSession {
+  id          String    @id @default(cuid())
+  routineId   String
+  userId      String
+  startTime   DateTime  @default(now())
+  endTime     DateTime?
+  duration    Int       @default(0)  // Duration in seconds
+  isPaused    Boolean   @default(false)
+  pausedAt    DateTime?
+  totalPaused Int       @default(0)  // Total paused time in seconds
+  routine     Routine   @relation(fields: [routineId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([routineId])
+}
+
+model Goal {
+  id          Int      @id @default(autoincrement())
+  userId      String
+  description String
+  completed   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("goals")
+}
+
+model UserSettings {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  theme                 String   @default("system")
+  soundEnabled          Boolean  @default(true)
+  notificationsEnabled  Boolean  @default(true)
+  focusDuration        Int      @default(25)
+  breakDuration        Int      @default(5)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("user_settings")
 } 

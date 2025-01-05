@@ -1,20 +1,20 @@
 import { prisma } from './prisma'
-import { Habit, HabitLog, Stats } from './types'
+import { Routine, RoutineLog, Stats } from './types'
 
-export async function createHabit(userId: string, habit: Partial<Habit>): Promise<Habit> {
-  return prisma.habit.create({
+export async function createRoutine(userId: string, routine: Partial<Routine>): Promise<Routine> {
+  return prisma.routine.create({
     data: {
       userId,
-      name: habit.name!,
-      description: habit.description,
-      frequency: habit.frequency!,
-      targetCount: habit.targetCount!,
+      name: routine.name!,
+      description: routine.description,
+      frequency: routine.frequency!,
+      targetCount: routine.targetCount!,
     },
   })
 }
 
-export async function getHabits(userId: string): Promise<Habit[]> {
-  return prisma.habit.findMany({
+export async function getRoutines(userId: string): Promise<Routine[]> {
+  return prisma.routine.findMany({
     where: { 
       userId,
       archivedAt: null,
@@ -29,9 +29,9 @@ export async function getHabits(userId: string): Promise<Habit[]> {
   })
 }
 
-export async function logHabit(habitId: string, userId: string, note?: string): Promise<HabitLog> {
-  const habit = await prisma.habit.findUnique({
-    where: { id: habitId },
+export async function logRoutine(routineId: string, userId: string, note?: string): Promise<RoutineLog> {
+  const routine = await prisma.routine.findUnique({
+    where: { id: routineId },
     include: { 
       logs: {
         orderBy: { completedAt: 'desc' },
@@ -40,32 +40,32 @@ export async function logHabit(habitId: string, userId: string, note?: string): 
     },
   })
 
-  if (!habit) throw new Error('Habit not found')
+  if (!routine) throw new Error('Routine not found')
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const completedToday = habit.logs.some((log: HabitLog) => {
+  const completedToday = routine.logs.some((log: RoutineLog) => {
     const logDate = new Date(log.completedAt)
     logDate.setHours(0, 0, 0, 0)
     return logDate.getTime() === today.getTime()
   })
 
   if (completedToday) {
-    return prisma.habitLog.create({
+    return prisma.routineLog.create({
       data: {
-        habitId,
+        routineId,
         userId,
         note,
       },
     })
   }
 
-  const lastLog = habit.logs[0]
-  let currentStreak = habit.currentStreak
-  let longestStreak = habit.longestStreak
+  const lastLog = routine.logs[0]
+  let currentStreak = routine.currentStreak
+  let longestStreak = routine.longestStreak
 
-  if (!lastLog || isStreakBroken(lastLog.completedAt, today, habit.frequency)) {
+  if (!lastLog || isStreakBroken(lastLog.completedAt, today, routine.frequency)) {
     currentStreak = 1
   } else {
     currentStreak++
@@ -73,14 +73,14 @@ export async function logHabit(habitId: string, userId: string, note?: string): 
 
   longestStreak = Math.max(currentStreak, longestStreak)
 
-  await prisma.habit.update({
-    where: { id: habitId },
+  await prisma.routine.update({
+    where: { id: routineId },
     data: { currentStreak, longestStreak },
   })
 
-  return prisma.habitLog.create({
+  return prisma.routineLog.create({
     data: {
-      habitId,
+      routineId,
       userId,
       note,
     },
@@ -88,7 +88,7 @@ export async function logHabit(habitId: string, userId: string, note?: string): 
 }
 
 export async function getStats(userId: string): Promise<Stats> {
-  const habits = await prisma.habit.findMany({
+  const routines = await prisma.routine.findMany({
     where: { userId },
     include: {
       logs: {
@@ -99,16 +99,16 @@ export async function getStats(userId: string): Promise<Stats> {
         },
       },
     },
-  }) as Habit[]
+  }) as Routine[]
 
-  const totalHabits = habits.length
-  const completedToday = habits.filter((h: Habit) => h.logs.length > 0).length
-  const currentStreak = Math.max(...habits.map((h: Habit) => h.currentStreak), 0)
-  const longestStreak = Math.max(...habits.map((h: Habit) => h.longestStreak), 0)
-  const completionRate = totalHabits ? (completedToday / totalHabits) * 100 : 0
+  const totalRoutines = routines.length
+  const completedToday = routines.filter((r: Routine) => r.logs.length > 0).length
+  const currentStreak = Math.max(...routines.map((r: Routine) => r.currentStreak), 0)
+  const longestStreak = Math.max(...routines.map((r: Routine) => r.longestStreak), 0)
+  const completionRate = totalRoutines ? (completedToday / totalRoutines) * 100 : 0
 
   return {
-    totalHabits,
+    totalRoutines,
     completedToday,
     currentStreak,
     longestStreak,
@@ -131,17 +131,17 @@ function isStreakBroken(lastDate: Date, currentDate: Date, frequency: string): b
   }
 }
 
-export async function archiveHabit(habitId: string, userId: string): Promise<Habit> {
-  const habit = await prisma.habit.findUnique({
-    where: { id: habitId },
+export async function archiveRoutine(routineId: string, userId: string): Promise<Routine> {
+  const routine = await prisma.routine.findUnique({
+    where: { id: routineId },
   })
 
-  if (!habit || habit.userId !== userId) {
-    throw new Error('Habit not found or unauthorized')
+  if (!routine || routine.userId !== userId) {
+    throw new Error('Routine not found or unauthorized')
   }
 
-  return prisma.habit.update({
-    where: { id: habitId },
+  return prisma.routine.update({
+    where: { id: routineId },
     data: { 
       archivedAt: new Date(),
     },
