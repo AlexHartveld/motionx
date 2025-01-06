@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { SignInButton, SignUpButton, useClerk } from "@clerk/nextjs";
+import { useClerk } from "@clerk/nextjs";
 import { useAuth } from "@clerk/nextjs";
 import { Moon, Sun, LogOut } from 'lucide-react';
 import Link from "next/link";
@@ -58,16 +58,21 @@ export function NavBar() {
             </>
           ) : (
             <>
-              <SignInButton mode="modal">
-                <button className="text-sm hover:text-gray-600">
+              <Link href="/sign-in">
+                <Button
+                  variant="ghost"
+                  className="text-sm hover:text-gray-600"
+                >
                   Sign In
-                </button>
-              </SignInButton>
-              <SignUpButton mode="modal">
-                <button className="px-4 py-2 text-sm text-white bg-black rounded-md hover:bg-gray-800">
+                </Button>
+              </Link>
+              <Link href="/sign-up">
+                <Button
+                  className="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-xl"
+                >
                   Sign Up
-                </button>
-              </SignUpButton>
+                </Button>
+              </Link>
             </>
           )}
         </div>
