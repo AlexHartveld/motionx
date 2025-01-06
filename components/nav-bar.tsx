@@ -1,17 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { UserButton, SignInButton, SignUpButton, useClerk } from "@clerk/nextjs";
+import { SignInButton, SignUpButton, useClerk } from "@clerk/nextjs";
 import { useAuth } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Moon, Sun, LogOut } from 'lucide-react';
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
-export default function NavBar() {
+export function NavBar() {
   const { isSignedIn } = useAuth();
   const { signOut } = useClerk();
-  const router = useRouter();
   const [darkMode, setDarkMode] = useState(false);
 
   const handleSignOut = async () => {

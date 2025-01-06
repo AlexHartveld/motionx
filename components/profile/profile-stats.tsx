@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -8,8 +8,6 @@ import {
   Line,
   BarChart,
   Bar,
-  PieChart,
-  Pie,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -18,11 +16,9 @@ import {
   Cell,
 } from 'recharts';
 import { Calendar } from '@/components/ui/calendar';
-import { addDays, format, subDays } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import type { UserStats } from '@/lib/types';
 import { type DateRange } from "react-day-picker";
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#FF4842'];
 
 type RoutinePerformanceProps = {
   routine: {
@@ -199,11 +195,7 @@ export function ProfileStats() {
     to: new Date(),
   });
 
-  useEffect(() => {
-    fetchStats();
-  }, [dateRange]);
-
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const from = dateRange?.from || subDays(new Date(), 30);
       const to = dateRange?.to || new Date();
@@ -218,7 +210,11 @@ export function ProfileStats() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [dateRange]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
 
   if (isLoading) {
     return (
@@ -284,20 +280,26 @@ export function ProfileStats() {
 
         <TabsContent value="focus" className="space-y-4">
           <Card className="p-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col lg:flex-row items-start justify-between gap-6 mb-6">
               <h3 className="text-lg font-semibold">Focus Time Trends</h3>
-              <Calendar
-                mode="range"
-                defaultMonth={dateRange?.from}
-                selected={dateRange}
-                onSelect={(range: DateRange | undefined) => {
-                  if (range?.from && range?.to) {
-                    setDateRange({ from: range.from, to: range.to });
-                  }
-                }}
-                numberOfMonths={2}
-                className="rounded-md border"
-              />
+              <div className="w-full lg:w-auto">
+                <div className="bg-background rounded-lg border">
+                  <Calendar
+                    mode="range"
+                    defaultMonth={dateRange?.from}
+                    selected={dateRange}
+                    onSelect={(range: DateRange | undefined) => {
+                      if (range?.from && range?.to) {
+                        setDateRange({ from: range.from, to: range.to });
+                      }
+                    }}
+                    numberOfMonths={2}
+                    disabled={{ after: new Date() }}
+                    initialFocus
+                    className="p-0"
+                  />
+                </div>
+              </div>
             </div>
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">

@@ -13,7 +13,7 @@ export async function DELETE(
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const routine = await prisma.routine.update({
+    await prisma.routine.update({
       where: {
         id: params.routineId,
         userId,
@@ -23,8 +23,9 @@ export async function DELETE(
       },
     });
 
-    return NextResponse.json(routine);
+    return new NextResponse(null, { status: 204 });
   } catch (error) {
+    console.error('Error deleting routine:', error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 } 

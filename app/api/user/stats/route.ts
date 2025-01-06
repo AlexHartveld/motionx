@@ -10,6 +10,7 @@ import {
   addDays,
   differenceInDays 
 } from "date-fns";
+import type { FocusSession, RoutineLog, Routine } from '@prisma/client';
 
 type FocusCategory = 'Under 15min' | '15-30min' | '30-45min' | '45-60min' | 'Over 60min';
 
@@ -137,7 +138,10 @@ export async function GET(request: Request) {
 }
 
 // Helper functions for calculations
-function calculateProductivityScore(logs: any[], sessions: any[]): number {
+function calculateProductivityScore(
+  logs: RoutineLog[],
+  sessions: FocusSession[]
+): number {
   const completionRate = logs.length / Math.max(1, sessions.length);
   const avgSessionLength = sessions.reduce((acc, s) => acc + (s.duration || 0), 0) / Math.max(1, sessions.length);
   const normalizedLength = Math.min(avgSessionLength / (25 * 60), 1); // Normalize against 25-minute sessions
@@ -145,10 +149,13 @@ function calculateProductivityScore(logs: any[], sessions: any[]): number {
   return (completionRate * 0.6 + normalizedLength * 0.4);
 }
 
-function calculateRoutinePerformance(routines: any[]) {
+function calculateRoutinePerformance(routines: (Routine & {
+  logs: RoutineLog[];
+  focusSessions: FocusSession[];
+})[]) {
   return routines.map(routine => {
     const completionRate = routine.logs.length / Math.max(1, routine.focusSessions.length);
-    const totalFocusTime = routine.focusSessions.reduce((acc: number, s: any) => acc + (s.duration || 0), 0);
+    const totalFocusTime = routine.focusSessions.reduce((acc, session) => acc + (session.duration || 0), 0);
     const averageSessionLength = totalFocusTime / Math.max(1, routine.focusSessions.length);
     
     return {
@@ -162,7 +169,7 @@ function calculateRoutinePerformance(routines: any[]) {
   });
 }
 
-function calculateProductiveHours(sessions: any[]) {
+function calculateProductiveHours(sessions: FocusSession[]) {
   const hourlyData = new Array(24).fill(null).map((_, hour) => ({
     hour,
     sessions: 0,
@@ -185,7 +192,7 @@ function calculateProductiveHours(sessions: any[]) {
   }));
 }
 
-function calculateStreakData(logs: any[]) {
+function calculateStreakData(logs: RoutineLog[]) {
   // Sort logs by date
   const sortedLogs = logs.sort((a, b) => 
     new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
@@ -193,7 +200,7 @@ function calculateStreakData(logs: any[]) {
 
   let currentStreak = 0;
   let longestStreak = 0;
-  let streakHistory = [];
+  const streakHistory = [];
   let lastDate = new Date();
 
   // Calculate streaks
@@ -230,7 +237,7 @@ function calculateStreakData(logs: any[]) {
   };
 }
 
-function calculateFocusDistribution(sessions: any[]) {
+function calculateFocusDistribution(sessions: FocusSession[]) {
   const distributions: Distribution = {
     'Under 15min': { count: 0, totalEffectiveness: 0 },
     '15-30min': { count: 0, totalEffectiveness: 0 },
@@ -239,7 +246,7 @@ function calculateFocusDistribution(sessions: any[]) {
     'Over 60min': { count: 0, totalEffectiveness: 0 }
   };
 
-  sessions.forEach(session => {
+  sessions.forEach((session: FocusSession) => {
     const duration = session.duration / 60; // Convert to minutes
     const effectiveness = session.endTime ? 1 : 0.5;
     
@@ -261,7 +268,12 @@ function calculateFocusDistribution(sessions: any[]) {
   }));
 }
 
-function calculateWeeklyStats(logs: any[], sessions: any[], fromDate: Date, toDate: Date) {
+function calculateWeeklyStats(
+  logs: RoutineLog[],
+  sessions: FocusSession[],
+  fromDate: Date,
+  toDate: Date
+) {
   const stats = [];
   let currentDate = fromDate;
 
@@ -287,7 +299,7 @@ function calculateWeeklyStats(logs: any[], sessions: any[], fromDate: Date, toDa
   return stats;
 }
 
-function calculateFocusTimeChange(sessions: any[], fromDate: Date): number {
+function calculateFocusTimeChange(sessions: FocusSession[], fromDate: Date): number {
   const midPoint = addDays(fromDate, Math.floor(differenceInDays(new Date(), fromDate) / 2));
   
   const firstHalf = sessions.filter(s => new Date(s.startTime) < midPoint);
@@ -299,7 +311,12 @@ function calculateFocusTimeChange(sessions: any[], fromDate: Date): number {
   return firstHalfTotal === 0 ? 1 : (secondHalfTotal - firstHalfTotal) / firstHalfTotal;
 }
 
-function calculateCompletionRates(logs: any[], routines: any[], fromDate: Date, toDate: Date) {
+function calculateCompletionRates(
+  logs: RoutineLog[],
+  routines: Routine[],
+  fromDate: Date,
+  toDate: Date
+) {
   const rates = [];
   let currentDate = fromDate;
 

@@ -1,10 +1,11 @@
-import { NextResponse, NextRequest } from 'next/server'
-import { getAuth } from '@clerk/nextjs/server'
+import { NextResponse } from 'next/server'
+import { auth } from '@clerk/nextjs'
 import { prisma } from '@/lib/prisma'
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const { userId } = getAuth(req)
+    const session = auth();
+    const { userId } = await session;
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 })
@@ -23,9 +24,10 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
-    const { userId } = getAuth(req)
+    const session = auth();
+    const { userId } = await session;
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 })

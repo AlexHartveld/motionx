@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Plus, Check, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import LoadingSpinner from './loading-spinner'
+import { useToast } from "@/components/ui/use-toast"
 
 interface Goal {
   id: number
@@ -18,12 +19,10 @@ export default function GoalsSection() {
   const [goals, setGoals] = useState<Goal[]>([])
   const [newGoal, setNewGoal] = useState('')
   const [loading, setLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { toast } = useToast()
 
-  useEffect(() => {
-    fetchGoals()
-  }, [])
-
-  const fetchGoals = async () => {
+  const fetchGoals = useCallback(async () => {
     try {
       const response = await fetch('/api/goals')
       if (!response.ok) {
@@ -34,13 +33,24 @@ export default function GoalsSection() {
       setLoading(false)
     } catch (error) {
       console.error('Error fetching goals:', error)
+      toast({
+        title: "Error",
+        description: "Failed to fetch goals. Please try again.",
+        variant: "destructive",
+      })
       setLoading(false)
     }
-  }
+  }, [toast])
+
+  useEffect(() => {
+    fetchGoals()
+  }, [fetchGoals])
 
   const addGoal = async () => {
     if (newGoal.trim() === '') return
+    if (isSubmitting) return
 
+    setIsSubmitting(true)
     try {
       const response = await fetch('/api/goals', {
         method: 'POST',
@@ -60,8 +70,19 @@ export default function GoalsSection() {
       const goal = await response.json()
       setGoals(prevGoals => [goal, ...prevGoals])
       setNewGoal('')
+      toast({
+        title: "Success",
+        description: "Goal added successfully",
+      })
     } catch (error) {
       console.error('Error adding goal:', error)
+      toast({
+        title: "Error",
+        description: "Failed to add goal. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -87,8 +108,17 @@ export default function GoalsSection() {
 
       const updatedGoal = await response.json()
       setGoals(prevGoals => prevGoals.map(g => g.id === id ? updatedGoal : g))
+      toast({
+        title: "Success",
+        description: updatedGoal.completed ? "Goal marked as completed" : "Goal marked as incomplete",
+      })
     } catch (error) {
       console.error('Error toggling goal:', error)
+      toast({
+        title: "Error",
+        description: "Failed to update goal. Please try again.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -107,8 +137,17 @@ export default function GoalsSection() {
       }
 
       setGoals(prevGoals => prevGoals.filter(g => g.id !== id))
+      toast({
+        title: "Success",
+        description: "Goal deleted successfully",
+      })
     } catch (error) {
       console.error('Error deleting goal:', error)
+      toast({
+        title: "Error",
+        description: "Failed to delete goal. Please try again.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -145,8 +184,13 @@ export default function GoalsSection() {
             onChange={(e) => setNewGoal(e.target.value)}
             onKeyPress={handleKeyPress}
             className="mr-2 bg-white dark:bg-gray-800 text-black dark:text-white brutalist-border"
+            disabled={isSubmitting}
           />
-          <Button onClick={addGoal} className="brutalist-border brutalist-hover">
+          <Button 
+            onClick={addGoal} 
+            className="brutalist-border brutalist-hover"
+            disabled={isSubmitting}
+          >
             <Plus className="h-4 w-4" />
           </Button>
         </div>

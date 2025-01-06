@@ -1,42 +1,45 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs';
 import { prisma } from '@/lib/prisma';
-import { headers } from 'next/headers';
 
 export async function POST(
-  req: Request,
+  request: Request,
   { params }: { params: { sessionId: string } }
 ) {
-  await headers();
-  const session = await auth();
-  const userId = session.userId;
-
-  if (!userId) {
-    return new NextResponse("Unauthorized", { status: 401 });
-  }
-
-  const { sessionId } = params;
-  const path = new URL(req.url).pathname;
-
-  // Verify that the session belongs to the user
-  const existingSession = await prisma.focusSession.findUnique({
-    where: { id: sessionId },
-    include: {
-      routine: true
-    }
-  });
-
-  if (!existingSession || existingSession.userId !== userId) {
-    return new NextResponse("Unauthorized", { status: 401 });
-  }
-
   try {
+    const session = await auth();
+    const userId = session.userId;
+
+    if (!userId) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    const { sessionId } = params;
+    const path = new URL(request.url).pathname;
+    const data = await request.json();
+
+    // Verify that the session belongs to the user
+    const existingSession = await prisma.focusSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        routine: true
+      }
+    });
+
+    if (!existingSession || existingSession.userId !== userId) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+
     if (path.endsWith('/pause')) {
+      const { pausedAt, duration } = data;
+
       const focusSession = await prisma.focusSession.update({
         where: { id: sessionId },
         data: {
           isPaused: true,
-          pausedAt: new Date(),
+          pausedAt: new Date(pausedAt),
+          duration: duration,
+          totalPaused: existingSession.totalPaused || 0
         },
         include: {
           routine: true
@@ -46,20 +49,14 @@ export async function POST(
     }
 
     if (path.endsWith('/resume')) {
-      const session = await prisma.focusSession.findUnique({
-        where: { id: sessionId },
-        include: {
-          routine: true
-        }
-      });
-
-      if (!session) {
-        return new NextResponse("Session not found", { status: 404 });
+      if (!existingSession.pausedAt) {
+        return new NextResponse("Session not paused", { status: 400 });
       }
 
-      const pausedTime = session.pausedAt 
-        ? Math.floor((new Date().getTime() - session.pausedAt.getTime()) / 1000)
-        : 0;
+      const { resumedAt } = data;
+      const pausedTime = Math.floor(
+        (new Date(resumedAt).getTime() - existingSession.pausedAt.getTime()) / 1000
+      );
 
       const focusSession = await prisma.focusSession.update({
         where: { id: sessionId },
@@ -68,7 +65,7 @@ export async function POST(
           pausedAt: null,
           totalPaused: {
             increment: pausedTime
-          },
+          }
         },
         include: {
           routine: true
@@ -78,14 +75,16 @@ export async function POST(
     }
 
     if (path.endsWith('/end')) {
-      const body = await req.json();
-      const { duration } = body;
+      const { endTime, duration, totalPaused } = data;
 
       const focusSession = await prisma.focusSession.update({
         where: { id: sessionId },
         data: {
-          endTime: new Date(),
-          duration,
+          endTime: new Date(endTime),
+          duration: duration,
+          totalPaused: totalPaused,
+          isPaused: false,
+          pausedAt: null
         },
         include: {
           routine: true

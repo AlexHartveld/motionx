@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -12,7 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import {
@@ -31,16 +30,13 @@ export function ProfileSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchSettings();
-  }, []);
-
-  const fetchSettings = async () => {
+  const fetchSettings = useCallback(async () => {
     try {
       const response = await fetch('/api/user/settings');
       const data = await response.json();
       setSettings(data);
     } catch (error) {
+      console.error('Failed to load settings:', error);
       toast({
         title: 'Error',
         description: 'Failed to load settings',
@@ -49,7 +45,11 @@ export function ProfileSettings() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
   const handleSave = async () => {
     try {
@@ -66,6 +66,7 @@ export function ProfileSettings() {
         });
       }
     } catch (error) {
+      console.error('Failed to update settings:', error);
       toast({
         title: 'Error',
         description: 'Failed to update settings',

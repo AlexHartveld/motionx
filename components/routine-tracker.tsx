@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
-import { Routine, Stats } from '@/lib/types'
+import { Routine } from '@/lib/types'
 import ConfirmationDialog from './confirmation-dialog'
 import AddRoutineForm from './add-routine-form'
 import LoadingSpinner from './loading-spinner'
@@ -11,34 +11,13 @@ interface RoutineTrackerProps {
   onRoutinesUpdate: (routines: Routine[]) => void;
 }
 
-function formatDuration(minutes: number): string {
-  if (minutes >= 60) {
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
-  }
-  return `${minutes}m`;
-}
-
 export default function RoutineTracker({ onRoutinesUpdate }: RoutineTrackerProps) {
   const { user } = useUser()
   const [routines, setRoutines] = useState<Routine[]>([])
-  const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
   const [routineToDelete, setRoutineToDelete] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!user) {
-      setRoutines([])
-      setStats(null)
-      setLoading(false)
-      return
-    }
-
-    fetchRoutines()
-  }, [user])
-
-  async function fetchRoutines() {
+  const fetchRoutines = useCallback(async () => {
     try {
       const response = await fetch('/api/routines')
       const data = await response.json()
@@ -49,11 +28,21 @@ export default function RoutineTracker({ onRoutinesUpdate }: RoutineTrackerProps
       console.error('Error fetching routines:', error)
       setLoading(false)
     }
-  }
+  }, [onRoutinesUpdate])
+
+  useEffect(() => {
+    if (!user) {
+      setRoutines([])
+      setLoading(false)
+      return
+    }
+
+    fetchRoutines()
+  }, [user, fetchRoutines])
 
   if (!user) {
     return (
-      <div className="text-center p-8">
+      <div className="text-center p-8 mt-16">
         <p className="text-lg text-gray-600 dark:text-gray-400">
           Please sign in to track your routines
         </p>
@@ -62,7 +51,11 @@ export default function RoutineTracker({ onRoutinesUpdate }: RoutineTrackerProps
   }
 
   if (loading) {
-    return <LoadingSpinner />
+    return (
+      <div className="mt-16">
+        <LoadingSpinner />
+      </div>
+    )
   }
 
   async function handleComplete(routineId: string) {
@@ -97,7 +90,7 @@ export default function RoutineTracker({ onRoutinesUpdate }: RoutineTrackerProps
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 mt-16 px-4 max-w-7xl mx-auto">
       <AddRoutineForm onAdd={fetchRoutines} />
       
       {routines.length === 0 ? (
